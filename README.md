@@ -1,5 +1,4 @@
 # Rock-Paper-Scissors-Gesture-Combat-Game-Robot
-# 🪨✋✂️ Rock Paper Scissors Gesture Combat Game Robot
 
 ## 📅 IoT & Embedded Systems Group Project
 
