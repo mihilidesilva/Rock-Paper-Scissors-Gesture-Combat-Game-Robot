@@ -1,178 +1,73 @@
-# Rock-Paper-Scissors-Gesture-Combat-Game-Robot
+# Welcome to your Lovable project
 
-## 📅 IoT & Embedded Systems Group Project
+## Project info
 
-## 📌 Project Overview
+**URL**: https://lovable.dev/projects/43b2224b-6839-451a-a397-f0bd833f0290
 
-The Rock Paper Scissors Gesture Combat Game Robot is an interactive human–robot gaming system that combines Arduino-based hardware with AI-powered hand gesture recognition. Players can challenge a robotic arm in the classic Rock–Paper–Scissors game using real-time hand gestures detected through a webcam.
+## How can I edit this code?
 
-When a player's hand is detected near the ultrasonic sensor, the game starts automatically. The webcam identifies the player's gesture (Rock ✊, Paper ✋, or Scissors ✌️), while the Arduino controls servo motors to perform the robot's move. The web application displays both gestures, determines the game result, and updates scores instantly.
+There are several ways of editing your application.
 
----
+**Use Lovable**
 
-## 🎯 Objectives
+Simply visit the [Lovable Project](https://lovable.dev/projects/43b2224b-6839-451a-a397-f0bd833f0290) and start prompting.
 
-* Develop an interactive gesture-controlled gaming experience.
-* Integrate hardware and software components in a real-time system.
-* Implement AI-based hand gesture recognition.
-* Create a fun and engaging human–robot interaction platform.
+Changes made via Lovable will be committed automatically to this repo.
 
----
+**Use your preferred IDE**
 
-## 🧩 Key Features
+If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
 
-✅ Real-time hand gesture detection using a webcam
+The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-✅ Automatic game start using ultrasonic sensor detection
+Follow these steps:
 
-✅ Servo motor-controlled robotic hand movements
+```sh
+# Step 1: Clone the repository using the project's Git URL.
+git clone <YOUR_GIT_URL>
 
-✅ Random robot gesture generation
+# Step 2: Navigate to the project directory.
+cd <YOUR_PROJECT_NAME>
 
-✅ Automatic Win / Lose / Draw decision logic
+# Step 3: Install the necessary dependencies.
+npm i
 
-✅ Live score tracking system
-
-✅ Real-time web interface synchronization
-
-✅ Audio feedback using buzzer
-
----
-
-## ⚙️ Technologies Used
-
-### Hardware
-
-* Arduino Nano
-* HC-SR04 Ultrasonic Sensor
-* Servo Motors (x3)
-* Buzzer
-* USB Webcam
-
-### Software
-
-* HTML5
-* CSS3
-* JavaScript
-* React.js
-* Vite
-* Tailwind CSS
-* Node.js
-* TensorFlow.js / MediaPipe
-* Arduino IDE
-
----
-
-## 🪛 Hardware Configuration
-
-| Component                | Pin |
-| ------------------------ | --- |
-| Ultrasonic Trigger       | A1  |
-| Ultrasonic Echo          | A0  |
-| Servo Motor 1 (Rock)     | A3  |
-| Servo Motor 2 (Paper)    | A4  |
-| Servo Motor 3 (Scissors) | A5  |
-| Buzzer                   | D2  |
-
----
-
-## 🔄 System Workflow
-
-1. Player places their hand near the ultrasonic sensor.
-2. Sensor detects the hand and starts the game.
-3. Webcam captures the player's hand gesture.
-4. AI model identifies Rock, Paper, or Scissors.
-5. Arduino randomly selects and performs the robot gesture using servo motors.
-6. Web application displays:
-
-   * Player Gesture
-   * Robot Gesture
-   * Game Result
-7. System determines:
-
-   * Win 🏆
-   * Lose ❌
-   * Draw 🤝
-8. Scores are updated automatically.
-
----
-
-## 💻 How to Run the Project
-
-### 🔸 Arduino Setup
-
-1. Open `Arduino/rps_main.ino` using Arduino IDE.
-2. Connect the Arduino Nano to your computer.
-3. Upload the code to the board.
-4. Connect all servos, ultrasonic sensor, and buzzer according to the circuit diagram.
-
-### 🔸 Web Application Setup
-
-#### Requirements
-
-* Node.js
-* npm
-
-#### Installation
-
-```bash
-npm install
-```
-
-#### Run the Project
-
-```bash
+# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
 
-Open the local development URL displayed in the terminal.
+**Edit a file directly in GitHub**
 
----
+- Navigate to the desired file(s).
+- Click the "Edit" button (pencil icon) at the top right of the file view.
+- Make your changes and commit the changes.
 
-## 📂 Project Structure
+**Use GitHub Codespaces**
 
-```text
-rock-paper-scissors-gesture-combat-game/
+- Navigate to the main page of your repository.
+- Click on the "Code" button (green button) near the top right.
+- Select the "Codespaces" tab.
+- Click on "New codespace" to launch a new Codespace environment.
+- Edit files directly within the Codespace and commit and push your changes once you're done.
 
-│
-├── Arduino/                 # Arduino source code
-├── public/                  # Static assets
-├── src/                     # React application source files
-├── index.html               # Main webpage
-├── package.json             # Project dependencies
-├── vite.config.ts           # Vite configuration
-└── README.md                # Project documentation
-```
+## What technologies are used for this project?
 
----
+This project is built with:
 
-## 📷 Project Images
-<img width="1367" height="2048" alt="2025_11_03_23_40_IMG_4195" src="https://github.com/user-attachments/assets/33f5c928-5386-4ec7-9e22-4b4dab369db0" />
-<img width="3024" height="4032" alt="2025_11_03_13_38_IMG_4057" src="https://github.com/user-attachments/assets/bdf29b6a-636a-482e-8c43-82713d57726d" />
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
 
----
+## How can I deploy this project?
 
-## 🚀 Future Improvements
+Simply open [Lovable](https://lovable.dev/projects/43b2224b-6839-451a-a397-f0bd833f0290) and click on Share -> Publish.
 
-* Multiplayer game mode
-* Voice command support
-* Mobile application integration
-* AI difficulty levels
-* Enhanced robotic hand design
-* Online score leaderboard
+## Can I connect a custom domain to my Lovable project?
 
----
+Yes, you can!
 
-## 👩‍💻 Development Team
+To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
-**HNDSE 25.1 Batch**
-
-* Mihili
-* Thamasha
-* Gothami
-
----
-
-## 📜 License
-
-This project is licensed under the MIT License and is available for educational and non-commercial use.
+Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)

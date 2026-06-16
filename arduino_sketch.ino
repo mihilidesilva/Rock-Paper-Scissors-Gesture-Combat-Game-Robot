@@ -1,0 +1,318 @@
+#include <Servo.h>
+
+// Create servo objects
+Servo servo1;  // Rock
+Servo servo2;  // Paper
+Servo servo3;  // Scissor
+
+// Pin definitions
+#define ECHO_PIN A0
+#define TRIG_PIN A1
+#define SERVO1_PIN A3
+#define SERVO2_PIN A4
+#define SERVO3_PIN A5
+#define BUZZER_PIN 8
+#define LED_PIN 13  // Built-in LED for status indication
+
+// Servo positions
+#define SERVO_NEUTRAL 0
+#define SERVO_ACTIVE 180
+
+// Ultrasonic sensor variables
+long duration;
+int distance;
+unsigned long lastUltrasonicPoll = 0;
+const unsigned long ULTRASONIC_POLL_INTERVAL = 20; // Poll every 20ms for faster detection
+bool ultrasonicDetected = false;
+unsigned long ultrasonicTimestamp = 0;
+
+// Timing
+unsigned long lastCommandTime = 0;
+const unsigned long COMMAND_TIMEOUT = 10000; // 10 seconds timeout
+
+// Servo timing for non-blocking operation
+unsigned long servoStartTime = 0;
+bool servoMoving = false;
+const unsigned long SERVO_MOVE_DURATION = 1000; // 1 second for move
+const unsigned long SERVO_RESET_DELAY = 1000; // 1 second between rounds
+
+// Ultrasonic debounce variables
+unsigned long lastTriggerTime = 0;
+const unsigned long DEBOUNCE_DELAY = 2000; // 2 seconds debounce to prevent multiple triggers
+bool canTrigger = true;
+
+// Web app connection tracking
+bool isWebAppConnected = false;
+
+// Global variables for robot move tracking
+String robotMove = "";
+Servo* activeServo = nullptr;
+
+void setup() {
+  Serial.begin(115200);  // Increased baud rate for faster communication
+
+  // Wait for serial connection (optional)
+  while (!Serial) {
+    delay(10);
+  }
+
+  // Attach servos
+  servo1.attach(SERVO1_PIN);
+  servo2.attach(SERVO2_PIN);
+  servo3.attach(SERVO3_PIN);
+
+  // Pin modes
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
+
+  // Initialize servos to neutral position with proper sequencing
+  resetAllServosSequentially();
+
+  // Send ready signal
+  Serial.println("READY");
+
+  // Blink LED to indicate ready
+  for (int i = 0; i < 3; i++) {
+    digitalWrite(LED_PIN, HIGH);
+    delay(200);
+    digitalWrite(LED_PIN, LOW);
+    delay(200);
+  }
+}
+
+void loop() {
+  unsigned long currentTime = millis();
+
+  // Non-blocking ultrasonic sensor polling
+  if (currentTime - lastUltrasonicPoll >= ULTRASONIC_POLL_INTERVAL) {
+    lastUltrasonicPoll = currentTime;
+
+    // Measure distance
+    digitalWrite(TRIG_PIN, LOW);
+    delayMicroseconds(5);
+    digitalWrite(TRIG_PIN, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(TRIG_PIN, LOW);
+
+    duration = pulseIn(ECHO_PIN, HIGH, 60000); // Increased timeout for longer range
+    distance = duration * 0.034 / 2;
+
+    // Detect hand within 30cm with improved debounce logic
+    // Only trigger ultrasonic if NOT connected to web app (web app controls robot moves)
+    if (distance > 0 && distance < 30 && !ultrasonicDetected && canTrigger && !servoMoving && !isWebAppConnected) {
+      ultrasonicDetected = true;
+      ultrasonicTimestamp = currentTime;
+      canTrigger = false; // Disable triggering until debounce period
+      lastTriggerTime = currentTime;
+
+      // Beep to indicate detection
+      beep(1);
+
+      // Randomly select move - generate once and store it
+      if (robotMove == "") {
+        int choice = random(1, 4); // random 1–3
+        if (choice == 1) {
+          robotMove = "Rock";
+          activeServo = &servo1;
+        } else if (choice == 2) {
+          robotMove = "Paper";
+          activeServo = &servo2;
+        } else if (choice == 3) {
+          robotMove = "Scissor";
+          activeServo = &servo3;
+        }
+      }
+
+      // Send ultrasonic detection with timestamp and move
+      Serial.print("ULTRASONIC:");
+      Serial.print(ultrasonicTimestamp);
+      Serial.print(":");
+      Serial.println(robotMove);
+
+      // Start non-blocking servo movement immediately
+      resetAllServosSequentially();
+      delay(200); // Brief delay for servos to reset sequentially
+      activeServo->write(SERVO_ACTIVE);
+      digitalWrite(LED_PIN, HIGH);
+      servoStartTime = currentTime;
+      servoMoving = true;
+
+      // Send immediate confirmation that servo started moving
+      Serial.println(robotMove);  // Send the move name immediately for instant web display
+
+    } else if (distance >= 30) {
+      ultrasonicDetected = false;
+    }
+
+    // Handle debounce timing - only re-enable after servo movement is complete
+    if (!canTrigger && !servoMoving && (currentTime - lastTriggerTime >= DEBOUNCE_DELAY)) {
+      canTrigger = true; // Re-enable triggering after debounce period and servo is done
+    }
+  }
+
+  // Handle non-blocking servo timing
+  if (servoMoving) {
+    if (currentTime - servoStartTime >= SERVO_MOVE_DURATION + SERVO_RESET_DELAY) {
+      // Reset servos after full cycle
+      resetAllServosSequentially();
+      servoMoving = false;
+      Serial.println("MOVE_COMPLETE");
+
+      // Clear the stored move after completion so next round gets a new random move
+      robotMove = "";
+      activeServo = nullptr;
+    } else if (currentTime - servoStartTime >= SERVO_MOVE_DURATION) {
+      // Reset servos after move duration
+      resetAllServosSequentially();
+    }
+  }
+
+  // Check for serial commands from web app
+  if (Serial.available() > 0) {
+    String command = Serial.readStringUntil('\n');
+    command.trim();
+
+    // Update last command time
+    lastCommandTime = currentTime;
+
+    // Debug output
+    Serial.print("Received command: ");
+    Serial.println(command);
+
+    if (command == "RESET") {
+      resetAllServosSequentially();
+      ultrasonicDetected = false;
+      servoMoving = false;
+      Serial.println("RESET_ACK");
+      beep(1);
+
+    } else if (command.startsWith("PLAY:")) {
+      // Format: PLAY:PLAYER_MOVE
+      // Example: PLAY:ROCK
+      int firstColon = command.indexOf(':');
+
+      if (firstColon != -1) {
+        String playerMove = command.substring(firstColon + 1);
+
+        // Mark web app as connected to disable ultrasonic sensor
+        isWebAppConnected = true;
+
+        // Generate random robot move
+        int choice = random(1, 4); // random 1–3
+        String robotMove;
+        Servo* activeServoPtr;
+        if (choice == 1) {
+          robotMove = "ROCK";
+          activeServoPtr = &servo1;  // Rock gesture
+        } else if (choice == 2) {
+          robotMove = "PAPER";
+          activeServoPtr = &servo2;  // Paper gesture
+        } else if (choice == 3) {
+          robotMove = "SCISSORS";    // Changed to SCISSORS (plural)
+          activeServoPtr = &servo3;  // Scissors gesture
+        }
+
+        // Send robot move immediately for instant web display
+        Serial.print("ROBOT_MOVE:");
+        Serial.println(robotMove);
+
+        // Execute robot's physical move (servo movement)
+        if (robotMove == "ROCK") {
+          executeMoveSequentially("Rock", servo1);
+        } else if (robotMove == "PAPER") {
+          executeMoveSequentially("Paper", servo2);
+        } else if (robotMove == "SCISSORS") {
+          executeMoveSequentially("Scissors", servo3);
+        }
+
+        // Send acknowledgment after physical movement completes
+        Serial.println("PLAY_ACK");
+      } else {
+        Serial.println("ERROR_INVALID_PLAY_FORMAT");
+      }
+
+    } else if (command == "ROCK") {
+      executeMoveSequentially("Rock", servo1);
+
+    } else if (command == "PAPER") {
+      executeMoveSequentially("Paper", servo2);
+
+    } else if (command == "SCISSOR") {
+      executeMoveSequentially("Scissor", servo3);
+
+    } else if (command == "STATUS") {
+      // Send status information
+      Serial.println("STATUS_OK");
+      Serial.print("Servo1: ");
+      Serial.println(servo1.read());
+      Serial.print("Servo2: ");
+      Serial.println(servo2.read());
+      Serial.print("Servo3: ");
+      Serial.println(servo3.read());
+
+    } else {
+      // Unknown command
+      Serial.println("ERROR_UNKNOWN_COMMAND");
+    }
+  }
+
+  // Check for timeout and reset if needed
+  if (currentTime - lastCommandTime > COMMAND_TIMEOUT && lastCommandTime > 0) {
+    resetAllServosSequentially();
+    ultrasonicDetected = false;
+    servoMoving = false;
+    isWebAppConnected = false; // Reset web app connection on timeout
+    lastCommandTime = 0; // Reset to prevent continuous resets
+  }
+
+  // Small delay to prevent overwhelming the serial buffer (reduced for responsiveness)
+  delay(10);
+}
+
+// Function to reset all servos to neutral position sequentially
+void resetAllServosSequentially() {
+  // Reset servos one by one with delays to prevent simultaneous movement
+  servo1.write(SERVO_NEUTRAL);
+  delay(150); // Wait for servo1 to start moving
+  servo2.write(SERVO_NEUTRAL);
+  delay(150); // Wait for servo2 to start moving
+  servo3.write(SERVO_NEUTRAL);
+  delay(150); // Wait for servo3 to start moving
+  digitalWrite(LED_PIN, LOW);
+}
+
+// Function to execute a specific move with sequential servo control
+void executeMoveSequentially(String moveName, Servo& activeServo) {
+  // Reset all servos sequentially first
+  resetAllServosSequentially();
+  delay(500); // Reduced delay for faster response
+
+  // Activate the specific servo
+  activeServo.write(SERVO_ACTIVE);
+  digitalWrite(LED_PIN, HIGH); // Indicate active state
+
+  // Beep to indicate move execution
+  beep(2);
+
+  // Hold the position for 1 second (matching servo timing)
+  delay(1000);
+
+  // Return to neutral position (only the active servo)
+  activeServo.write(SERVO_NEUTRAL);
+  digitalWrite(LED_PIN, LOW);
+
+  // Send completion signal
+  Serial.println("MOVE_COMPLETE");
+}
+
+// Function to create beep patterns
+void beep(int count) {
+  for (int i = 0; i < count; i++) {
+    digitalWrite(BUZZER_PIN, HIGH);
+    delay(100);
+    digitalWrite(BUZZER_PIN, LOW);
+    if (i < count - 1) delay(100);
+  }
+}
